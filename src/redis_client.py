@@ -11,3 +11,11 @@ r = redis.Redis(
     username="default",
     password=os.getenv("REDIS_PASSWORD"),
 )
+
+def publish(topic: str, event: dict):
+    r.publish(topic, json.dumps(event))
+
+def subscribe(topic: str, handler):
+    pubsub = r.pubsub()
+    pubsub.subscribe(**{topic: handler})
+    pubsub.run_forever() # runs handler indefinitely
