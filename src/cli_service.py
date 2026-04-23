@@ -14,7 +14,7 @@ def submit_image(path: str, source: str):
     publish("image.submitted", {
         "type": "publish",
         "topic": "image.submitted",
-        "event_id": str(uuid.uuid4())
+        "event_id": str(uuid.uuid4()),
         "payload": {
             "image_id": image_id,
             "path": path,
@@ -25,8 +25,22 @@ def submit_image(path: str, source: str):
     print(f"[cli_service] Submitted image {image_id} from {source}")
     return image_id
 
-def submit_query():
-    return
+def submit_query(query_text: str):
+    # Simulate search
+    query_id = str(uuid.uuid4())
+
+    publish("query.submitted", {
+        "type": "publish",
+        "topic": "query.submitted",
+        "event_id": str(uuid.uuid4()),
+        "payload": {
+            "query_id": query_id,
+            "query_text": query_text,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    })
+    print(f"[cli_service] Submitted query: '{query_text}'")
+    return query_id
 
 def handle_query_completed(message):
     return
