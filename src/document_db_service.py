@@ -7,7 +7,7 @@ from redis_client import r, subscribe
 def store_annotation(image_id: str, annotation: dict):
     # Use Redis hashing as a stand-in, replace with FAISS later
     r.hset("annotations", image_id, json.dumps(annotation))
-    print(f" Stored aotation for {image_id}")
+    print(f" Stored annotation for {image_id}")
 
 def get_annotation(image_id: str):
     raw = r.hget("annotations", image_id)
@@ -21,7 +21,7 @@ def handle_inference_completed(message):
         return
     
     try: 
-        data = json.loads(message["data"])
+        data = json.loads(message["data"].decode("utf-8"))
         payload = data["payload"]
         image_id = payload["image_id"]
 
@@ -37,7 +37,7 @@ def handle_inference_completed(message):
 
         from redis_client import publish
         import uuid
-        publish("annoation.stored", {
+        publish("annotation.stored", {
             "type": "publish",
             "topic": "annotation.stored",
             "event_id": str(uuid.uuid4()),
