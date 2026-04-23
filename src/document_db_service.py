@@ -2,20 +2,7 @@ import redis
 import json
 from dotenv import load_dotenv
 import os
-
-load_dotenv()
-
-password = os.getenv("REDIS_PASSWORD")
-url = os.getenv("REDIS_URL")
-port = os.getenv(int("REDIS_PORT"))
-
-r = redis.Redis(
-    host=url,
-    port=port,
-    decode_responses=True,
-    username="default",
-    password=password,
-)
+from redis_client import r
 
 """success = r.set('foo', 'bar')
 # True
@@ -41,12 +28,12 @@ def publishMessage(my_channel, event_type, topic, event_id, payload):
         "type": event_type,       # "publish" or "status"
         "topic": topic,           # e.g. "image.submitted", "inference.completed"
         "event_id": event_id     # unique key
-       #"payload": {
-       #     "image_id": payload["image_id"],
-       #     "path": payload["path"],
-       #     "source": payload["source"],
-       #     "timestamp": payload["timestamp"]
-       #}
+        "payload": {
+            "image_id": payload["image_id"],
+            "path": payload["path"],
+            "source": payload["source"],
+            "timestamp": payload["timestamp"]
+       }
     })
     r.publish(channel=my_channel, message=message)
 
