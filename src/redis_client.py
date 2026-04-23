@@ -1,6 +1,7 @@
 import redis
 from dotenv import load_dotenv
 import os
+import json
 
 load_dotenv()
 
@@ -18,4 +19,6 @@ def publish(topic: str, event: dict):
 def subscribe(topic: str, handler):
     pubsub = r.pubsub()
     pubsub.subscribe(**{topic: handler})
-    pubsub.run_forever() # runs handler indefinitely
+    
+    for message in pubsub.listen():
+        handler(message)
