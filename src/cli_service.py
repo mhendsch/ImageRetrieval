@@ -48,7 +48,7 @@ def handle_query_completed(message):
         return
 
     try:
-        data = json.loads(message["data"].decode("utf-8"))
+        data = json.loads(message["data"])
         payload = data["payload"]
         print(f"\n[cli_service] Query results for '{payload['query_text']}':")
         for result in payload.get("results", []):

@@ -21,7 +21,7 @@ def handle_inference_completed(message):
         return
     
     try: 
-        data = json.loads(message["data"].decode("utf-8"))
+        data = json.loads(message["data"])
         payload = data["payload"]
         image_id = payload["image_id"]
 

@@ -27,7 +27,7 @@ def handle_annotation_stored(message):
     if message["type"] != "message":
         return
     try:
-        data = json.loads(message["data"].decode("utf-8"))
+        data = json.loads(message["data"])
         payload = data["payload"]
         image_id = payload["image_id"]
 
@@ -58,7 +58,7 @@ def handle_query_submitted(message):
         return
 
     try:
-        data = json.loads(message["data"].decode("utf-8"))
+        data = json.loads(message["data"])
         payload = data["payload"]
         query_id = payload["query_id"]
         query_text = payload["query_text"]

@@ -38,7 +38,7 @@ def handle_image_submitted(message):
         return
     
     try:
-        data = json.loads(message["data"].decode("utf-8"))
+        data = json.loads(message["data"])
         payload = data["payload"]
         image_id = payload["image_id"]
 
