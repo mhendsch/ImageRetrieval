@@ -54,7 +54,54 @@ def handle_annotation_stored(message):
         print(f"[embedding_service] Bad event, ignoring: {e}")
 
 def handle_query_submitted(message):
+    if message["type"] != "message":
+        return
+
+    try:
+        data = json.loads(message["data"].decode("utf-8"))
+        payload = data["payload"]
+        query_id = payload["query_id"]
+        query_text = payload["query_text"]
+
+        # Simulate a query embedding
+        query_vector = simulate_embedding(query_text)
+
+        # Cosine similarity (credit: Claude), for simulation only
+        results = []
+        for image_id, vector in _vector_store.items():
+            score = cosine_similarity(query_vector, vector)
+            results.append({"image_id": image_id, "score": score})
+        
+        # Return top 5
+        results.sort(key=lambda x: x["score"], reverse=True)
+        top_k = results[:5]
+
+        publish("query.completed", {
+            "type": "publish",
+            "topic": "query.completed",
+            "event.id": str(uuid.uuid4()),
+            "payload": {
+                "query_id": query_id,
+                "query_text": query_text,
+                "results": top_k
+            }
+        })
+
+    except (KeyError, json.JSONDecodeError) as e:
+        # Handle error
+        print(f"[embedding_service] Bad query event, ignoring: {e}")
+
     return
+
+def cosine_similarity(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    mag_a = sum(x ** 2 for x in a) ** 0.5
+    mag_b = sum(x ** 2 for x in b) ** 0.5
+    if mag_a == 0 or mag_b == 0:
+        return 0.0
+    return dot / (mag_a * mag_b)
+
+
 
 if __name__ == "__main__":
     import threading
