@@ -3,6 +3,7 @@ import json
 from dotenv import load_dotenv
 import os
 from redis_client import r
+import uuid
 
 TOPIC = "image.submitted"
 
