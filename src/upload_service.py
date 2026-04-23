@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 from redis_client import r
 import uuid
-import datetime
+from datetime import datetime, timezone
 
 TOPIC = "image.submitted"
 
