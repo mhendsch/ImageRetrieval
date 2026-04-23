@@ -2,7 +2,7 @@ import redis
 import json
 from dotenv import load_dotenv
 import os
-from redis_client import r
+from redis_client import r, subscribe
 
 def store_annotation(image_id: str, annotation: dict):
     # Use Redis hashing as a stand-in, replace with FAISS later
