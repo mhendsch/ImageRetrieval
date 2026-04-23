@@ -28,6 +28,7 @@ def handle_inference_completed(message):
         # Build annotation
         annotation = {
             "image_id": image_id,
+            "path": payload["path"],
             "camera": payload.get("source"),
             "objects": payload.get("objects", []),
             "history": ["submitted", "inference_completed"]
