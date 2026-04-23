@@ -104,6 +104,8 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
 
 
 if __name__ == "__main__":
+    import time
+    time.sleep(1) # give time for Redis connection
     import threading
     print("[embedding_service] Listening on annotation.stored and query.submitted...")
 

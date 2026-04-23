@@ -54,5 +54,7 @@ def handle_inference_completed(message):
     return
 
 if __name__ == "__main__":
+    import time
+    time.sleep(1) # give time for Redis connection
     print("[document_db_service] Listening on inference.completed...")
     subscribe("inference.completed", handle_inference_completed)

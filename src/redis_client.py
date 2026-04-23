@@ -19,6 +19,6 @@ def publish(topic: str, event: dict):
 def subscribe(topic: str, handler):
     pubsub = r.pubsub()
     pubsub.subscribe(**{topic: handler})
-    
+    #print(f"Subscribed to {topic}")
     for message in pubsub.listen():
         handler(message)

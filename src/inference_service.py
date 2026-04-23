@@ -73,5 +73,7 @@ def handle_image_submitted(message):
 
 
 if __name__ == "__main__":
+    import time
+    time.sleep(1) # give time for Redis connection
     print("[inference_service] Listening on image.submitted...")
     subscribe("image.submitted", handle_image_submitted)
