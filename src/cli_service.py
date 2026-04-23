@@ -1,23 +1,18 @@
 import redis
 import json
+import uuid
 from dotenv import load_dotenv
 import os
 from redis_client import r
 
+# Query and simulated uploads
 
+def submit_image():
+    return
 
-def handle_message(message):
-    if message["type"] == "pmessage":
-        data = json.loads(message["data"])
-        topic = data["topic"]
+def submit_query():
+    return
 
-        if topic == "image.submitted":
-            print("Image submitted!")
-
-pubsub = r.pubsub()
-pubsub.psubscribe("image.*")
-print("CLI listening...")
-for message in pubsub.listen():
-    handle_message(message)
-
+def handle_query_completed(message):
+    return
 
