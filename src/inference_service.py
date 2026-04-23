@@ -34,7 +34,43 @@ def simulate_inference(image_id: str) -> list[dict]:
 _processed: set[str] = set()
 
 def handle_image_submitted(message):
-    return
+    if message["type"] != "message":
+        return
+    
+    try:
+        data = json.loads(message["data"].decode("utf-8"))
+        payload = data["payload"]
+        image_id = payload["image_id"]
+
+        # Check for double inference
+        if image_id in _processed:
+            print(f"[inference_service] Already processed {image_id}, ignoring")
+            return
+        
+        print(f"[inference_service] Running inference on {image_id}...")
+        objects = simulate_inference(image_id)
+        _processed.add(image_id)
+
+        publish("inference.completed", {
+            "type": "publish",
+            "topic": "inference.completed",
+            "event_id": str(uuid.uuid4()),
+            "payload": {
+                "image_id": image_id,
+                "path": payload["path"],
+                "source": payload["source"],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "objects": objects
+            }
+        })
+
+        print(f"[inference_service] Published inference.completed for {image_id} "
+              f"({len(objects)} objects detected)")
+
+    except (KeyError, json.JSONDecodeError) as e:
+        # Handle bad event
+        print(f"[inference_service] Bad event, ignoring: {e}")
+
 
 if __name__ == "__main__":
     print("[inference_service] Listening on image.submitted...")
