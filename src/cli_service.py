@@ -54,7 +54,7 @@ def handle_query_completed(message):
         payload = data["payload"]
         print(f"\n[cli_service] Query results for '{payload['query_text']}':")
         for result in payload.get("results", []):
-            print(f"  - {result['image_id']} (score: {result['score']:.3f})")
+            print(f"  - {result['image_id']} | {result.get('path', 'unknown')} (score: {result['score']:.3f})")
     except (KeyError, json.JSONDecodeError) as e:
         # Handle bad event gracefully
         print(f"[cli_service] Bad result event, ignoring: {e}")

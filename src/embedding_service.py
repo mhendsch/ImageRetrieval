@@ -7,6 +7,7 @@ import uuid
 import random
 import torch
 import clip
+import traceback
 
 EMBEDDING_DIM = 512
 
@@ -38,14 +39,15 @@ def simulate_embedding(image_id: str) -> list[float]:
     return [rng.uniform(-1,1) for _ in range(EMBEDDING_DIM)]
 
 # Simulated FAISS
-_vector_store: dict[str, list[float]] = {}
+_vector_store: dict[str, dict] = {}
 
-def store_embedding(image_id: str, vector: list[float]):
-    _vector_store[image_id] = vector
+def store_embedding(image_id: str, vector: list[float], path: str = ""):
+    _vector_store[image_id] = {"vector": vector, "path": path}
     print(f"[embedding_service] Stored embedding for {image_id}")
 
 def get_embedding(image_id: str):
-    return _vector_store.get(image_id)
+    entry = _vector_store.get(image_id)
+    return entry["vector"] if entry else None
 
 def handle_annotation_stored(message):
     if message["type"] != "message":
@@ -73,7 +75,7 @@ def handle_annotation_stored(message):
             print(f"[embedding_service] Path not found, using simulated embedding")
             vector = simulate_embedding(image_id)
         
-        store_embedding(image_id, vector)
+        store_embedding(image_id, vector, path)
 
         publish("embedding.created", {
             "type": "publish",
@@ -108,9 +110,17 @@ def handle_query_submitted(message):
 
         # Cosine similarity (credit: Claude), for simulation only
         results = []
-        for image_id, vector in _vector_store.items():
+        #print(f"[embedding_service] Vector store contents: {list(_vector_store.keys())}")
+        #print(f"[embedding_service] Sample entry: {list(_vector_store.values())[0] if _vector_store else 'empty'}")
+        for image_id, entry in _vector_store.items():
+            vector = entry["vector"]
+            path = entry.get("path", "unkown")
             score = cosine_similarity(query_vector, vector)
-            results.append({"image_id": image_id, "score": score})
+            results.append({
+                "image_id": image_id, 
+                "path": path,
+                "score": score
+            })
         
         # Return top 5
         results.sort(key=lambda x: x["score"], reverse=True)
@@ -128,6 +138,7 @@ def handle_query_submitted(message):
         })
 
     except (KeyError, json.JSONDecodeError) as e:
+        traceback.print_exc()
         # Handle error
         print(f"[embedding_service] Bad query event, ignoring: {e}")
 
