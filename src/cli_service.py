@@ -9,6 +9,7 @@ from redis_client import r, publish, subscribe
 # Query and simulated uploads
 
 def submit_image(path: str, source: str):
+    abs_path = os.path.abspath(path)
     image_id = str(uuid.uuid4()) # Simulated, for now
 
     publish("image.submitted", {
@@ -17,12 +18,13 @@ def submit_image(path: str, source: str):
         "event_id": str(uuid.uuid4()),
         "payload": {
             "image_id": image_id,
-            "path": path,
+            "path": abs_path,
             "source": source,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
     })
     print(f"[cli_service] Submitted image {image_id} from {source}")
+    print(f"[cli_service] Path: {abs_path}")
     return image_id
 
 def submit_query(query_text: str):

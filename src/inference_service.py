@@ -6,7 +6,13 @@ from redis_client import r, subscribe, publish
 import uuid
 from datetime import datetime, timezone
 import random
+import torch
+import clip
+from PIL import Image
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model, preprocess = clip.load("ViT-B/32", device=device)
+model.eval()
 # Simulated labels that could be detected
 POSSIBLE_LABELS = ["car", "person", "truck", "bicycle", "motorcycle", "pedestrian", "bus", "train"]
 
@@ -30,6 +36,29 @@ def simulate_inference(image_id: str) -> list[dict]:
         })
     return objects
 
+def actual_inference(image_id: str, path: str) -> list[dict]:
+
+    image = preprocess(Image.open(path)).unsqueeze(0).to(device)
+    text = clip.tokenize(POSSIBLE_LABELS).to(device)
+
+    with torch.no_grad():
+        logits_per_image, logits_per_text = model(image, text)
+        probs = logits_per_image.softmax(dim=-1).cpu().numpy()[0]
+
+    # Build objects list
+    objects = []
+    for label, conf in zip(POSSIBLE_LABELS, probs):
+        conf = float(conf)
+        if conf > 0.1:
+            objects.append({
+                "label": label,
+                "bbox": [],
+                "conf": round(float(conf), 2)
+            })
+    
+    objects.sort(key=lambda x: x["conf"], reverse=True)
+    return objects
+
 # Track which image ids have been processed
 _processed: set[str] = set()
 
@@ -48,7 +77,12 @@ def handle_image_submitted(message):
             return
         
         print(f"[inference_service] Running inference on {image_id}...")
-        objects = simulate_inference(image_id)
+        if os.path.exists(payload["path"]):
+            objects = actual_inference(image_id, payload["path"])
+        else:
+            print(f"[inference_service] Path not found, using simulated inference")
+            objects = simulate_inference(image_id)
+
         _processed.add(image_id)
 
         publish("inference.completed", {
