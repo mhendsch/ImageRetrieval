@@ -28,6 +28,24 @@ db = client[os.getenv("MONGO_DB", "image_retrieval")]
 embeddings_collection = db["embeddings"]
 
 
+# Rebuild FAISS index from MongoDB on startup
+def load_index_from_mongo():
+    all_embeddings = embeddings_collection.find({}, {"_id": 0})
+    count = 0
+    for doc in all_embeddings:
+        image_id = doc["image_id"]
+        vector = doc["vector"]
+        path = doc.get("path", "unknown")
+
+        np_vector = np.array([vector], dtype="float32")
+        faiss.normalize_L2(np_vector)
+        index.add(np_vector)
+        id_map.append(image_id)
+        path_map[image_id] = path
+        count += 1
+    
+    print(f"[embedding_service] FAISS index rebuilt with {count} vectors")
+
 # Real embedding logic
 def get_text_embedding(query_text: str) -> list[float]:
     # Embed text using CLIP so it's comparable to image embedding
@@ -52,7 +70,7 @@ def simulate_embedding(image_id: str) -> list[float]:
     return [rng.uniform(-1,1) for _ in range(EMBEDDING_DIM)]
 
 
-# Store embeddings in MongoDB
+# Store embeddings in MongoDB, and add to FAISS
 def store_embedding(image_id: str, vector: list[float], path: str = ""):
     embeddings_collection.update_one(
         {"image_id": image_id},
@@ -62,6 +80,14 @@ def store_embedding(image_id: str, vector: list[float], path: str = ""):
             "path": path}},
         upsert=True
     )
+    # Add to FAISS index if not already there
+    if image_id not in path_map:
+        np_vector = np.array([vector], dtype="float32")
+        faiss.normalize_L2(np_vector)
+        index.add(np_vector)
+        id_map.append(image_id)
+        path_map[image_id] = path
+
     print(f"[embedding_service] Stored embedding for {image_id}")
 
 def get_embedding(image_id: str) -> list[float] | None:
