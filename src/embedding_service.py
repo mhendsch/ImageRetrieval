@@ -9,12 +9,23 @@ import torch
 import clip
 import traceback
 import faiss
+from pymongo import MongoClient
 
+# FAISS setup
 EMBEDDING_DIM = 512
+index = faiss.IndexFlatIP(EMBEDDING_DIM)
+id_map: list[str] = [] 
+path_map: dict[str, str] = {}
 
+# Clip setup
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 model.eval()
+
+# MongoDB setup
+client = MongoClient(os.getenv("MONGO_URI"))
+db = client[os.getenv("MONGO_DB", "image_retrieval")]
+embeddings_collection = db["embeddings"]
 
 
 # Real embedding logic
@@ -41,23 +52,26 @@ def simulate_embedding(image_id: str) -> list[float]:
     return [rng.uniform(-1,1) for _ in range(EMBEDDING_DIM)]
 
 
+# Store embeddings in MongoDB
 def store_embedding(image_id: str, vector: list[float], path: str = ""):
-    r.hset("embeddings", image_id, json.dumps({"vector": vector, "path": path}))
+    embeddings_collection.update_one(
+        {"image_id": image_id},
+        {"$set": {
+            "image_id": image_id,
+            "vector": vector, 
+            "path": path}},
+        upsert=True
+    )
     print(f"[embedding_service] Stored embedding for {image_id}")
 
 def get_embedding(image_id: str) -> list[float] | None:
-    raw = r.hget("embeddings", image_id)
-    if raw:
-        entry = json.loads(raw)
-        return entry["vector"]
-    return None
+    result = embeddings_collection.find_one({"image_id": image_id}, {"_id": 0})
+    return result["vector"] if result else None
 
 def get_all_embeddings() -> dict[str, dict]:
-    all_raw = r.hgetall("embeddings")
-    return {
-        image_id: json.loads(v)
-        for image_id, v in all_raw.items()
-    }
+    all_embeddings = embeddings_collection.find({}, {"_id": 0})
+    return {doc["image_id"]: {"vector": doc["vector"], "path": doc.get("path", "")}
+            for doc in all_embeddings}
 
 def handle_annotation_stored(message):
     if message["type"] != "message":
@@ -123,6 +137,20 @@ def handle_query_submitted(message):
             query_vector = get_image_embedding(query_path)
         
         vector_store = get_all_embeddings()
+
+        if not vector_store:
+            print(f"[embedding_service] No embeddings found, no results returned")
+            publish("query.completed", {
+                "type": "publish",
+                "topic": "query.completed",
+                "event_id": str(uuid.uuid4()),
+                "payload": {
+                    "query_id": query_id,
+                    "query_text": query_text,
+                    "results": []
+                }
+            })
+            return
 
         # Cosine similarity (credit: Claude), for simulation only
         results = []
