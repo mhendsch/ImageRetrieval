@@ -8,12 +8,14 @@ import random
 import torch
 import clip
 import traceback
+import faiss
 
 EMBEDDING_DIM = 512
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 model.eval()
+
 
 # Real embedding logic
 def get_text_embedding(query_text: str) -> list[float]:

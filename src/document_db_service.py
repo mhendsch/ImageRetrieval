@@ -3,21 +3,41 @@ import json
 from dotenv import load_dotenv
 import os
 from redis_client import r, subscribe
+from pymongo import MongoClient
+import uuid
+from datetime import datetime, timezone
+from dotenv import load_dotenv
 
+load_dotenv()
+
+# Connect to MongoDB
+client = MongoClient(os.getenv("MONGO_URI"))
+db = client[os.getenv("MONGO_DB", "image_retrieval")]
+annotations = db["annotations"]
+
+"""
 def store_annotation(image_id: str, annotation: dict):
     # Use Redis hashing as a stand-in, replace with FAISS later
     r.hset("annotations", image_id, json.dumps(annotation))
     print(f"[document_db_service] Stored annotation for {image_id}")
+"""
 
-def get_annotation(image_id: str):
-    raw = r.hget("annotations", image_id)
-    if raw: # Don't return null annotation
-        return json.loads(raw)
-    return None 
+def store_annotation(image_id: str, annotation: dict):
+    # Should handle idempotency
+    annotations.update_one(
+        {"image_id": image_id},
+        {"$set": annotation},
+        upsert=True # insert if not exists
+    )
+    print(f"[document_db_service] Stored annotation for {image_id} in MongoDB")
+
+def get_annotation(image_id: str) -> dict | None:
+    result = annotations.find_one({"image_id": image_id}, {"_id": 0})
+    return result
 
 def get_all_annotations() -> list[dict]:
-    all_raw = r.hgetall("annotations")
-    return [json.loads(v) for v in all_raw.values()]
+    all_raw = annotations.find({}, {"_id": 0})
+    return list(all_raw)
 
 def handle_inference_completed(message):
     # Listen for inference completed
