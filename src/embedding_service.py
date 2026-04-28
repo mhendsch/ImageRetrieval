@@ -124,9 +124,7 @@ def handle_query_submitted(message):
 
         # Cosine similarity (credit: Claude), for simulation only
         results = []
-        #print(f"[embedding_service] Vector store contents: {list(_vector_store.keys())}")
-        #print(f"[embedding_service] Sample entry: {list(_vector_store.values())[0] if _vector_store else 'empty'}")
-        for image_id, entry in _vector_store.items():
+        for image_id, entry in vector_store.items():
             vector = entry["vector"]
             path = entry.get("path", "unkown")
             score = cosine_similarity(query_vector, vector)
