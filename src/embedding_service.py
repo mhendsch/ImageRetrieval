@@ -38,16 +38,24 @@ def simulate_embedding(image_id: str) -> list[float]:
     rng = random.Random(image_id)
     return [rng.uniform(-1,1) for _ in range(EMBEDDING_DIM)]
 
-# Simulated FAISS
-_vector_store: dict[str, dict] = {}
 
 def store_embedding(image_id: str, vector: list[float], path: str = ""):
-    _vector_store[image_id] = {"vector": vector, "path": path}
+    r.hset("embeddings", image_id, json.dumps({"vector": vector, "path": path}))
     print(f"[embedding_service] Stored embedding for {image_id}")
 
-def get_embedding(image_id: str):
-    entry = _vector_store.get(image_id)
-    return entry["vector"] if entry else None
+def get_embedding(image_id: str) -> list[float] | None:
+    raw = r.hget("embeddings", image_id)
+    if raw:
+        entry = json.loads(raw)
+        return entry["vector"]
+    return None
+
+def get_all_embeddings() -> dict[str, dict]:
+    all_raw = r.hgetall("embeddings")
+    return {
+        image_id: json.loads(v)
+        for image_id, v in all_raw.items()
+    }
 
 def handle_annotation_stored(message):
     if message["type"] != "message":
@@ -100,13 +108,19 @@ def handle_query_submitted(message):
         data = json.loads(message["data"])
         payload = data["payload"]
         query_id = payload["query_id"]
-        query_text = payload["query_text"]
+        query_text = payload.get("query_text")
+        query_path = payload.get("query_path")
 
         # Simulate a query embedding
         # query_vector = simulate_embedding(query_text)
         
-        # Get actual text embedding
-        query_vector = get_text_embedding(query_text)
+        # Get actual embedding
+        if query_text != None:
+            query_vector = get_text_embedding(query_text)
+        elif query_path != None:
+            query_vector = get_image_embedding(query_path)
+        
+        vector_store = get_all_embeddings()
 
         # Cosine similarity (credit: Claude), for simulation only
         results = []

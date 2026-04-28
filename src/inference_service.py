@@ -14,7 +14,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 model.eval()
 # Simulated labels that could be detected
-POSSIBLE_LABELS = ["car", "person", "truck", "bicycle", "motorcycle", "pedestrian", "bus", "train"]
+POSSIBLE_LABELS = ["car", "person", "truck", "bicycle", "motorcycle", "pedestrian", "bus", "train", "traffic"]
 
 def simulate_inference(image_id: str) -> list[dict]:
     # Generate random classifications, seeded by image_id
@@ -99,7 +99,8 @@ def handle_image_submitted(message):
         })
 
         print(f"[inference_service] Published inference.completed for {image_id} "
-              f"({len(objects)} objects detected)")
+              f"({len(objects)} objects detected):"
+              f" {[obj['label'] for obj in objects]}")
 
     except (KeyError, json.JSONDecodeError) as e:
         # Handle bad event

@@ -28,7 +28,6 @@ def submit_image(path: str, source: str):
     return image_id
 
 def submit_query(query_text: str):
-    # Simulate search
     query_id = str(uuid.uuid4())
 
     publish("query.submitted", {
@@ -44,6 +43,23 @@ def submit_query(query_text: str):
     print(f"[cli_service] Submitted query: '{query_text}'")
     return query_id
 
+def submit_query_image(query_path: str):
+    query_id = str(uuid.uuid4())
+
+    publish("query.submitted", {
+        "type": "publish",
+        "topic": "query.submitted",
+        "event_id": str(uuid.uuid4()),
+        "payload": {
+            "query_id": query_id,
+            "query_path": query_path,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    })
+    print(f"[cli_service] Submitted query image: '{query_path}'")
+    return query_id
+
+
 def handle_query_completed(message):
     # Listen for results of query
     if message["type"] != "message":
@@ -52,7 +68,8 @@ def handle_query_completed(message):
     try:
         data = json.loads(message["data"])
         payload = data["payload"]
-        print(f"\n[cli_service] Query results for '{payload['query_text']}':")
+        query_label = payload.get("query_text") or payload.get("query_path") or "unknown"
+        print(f"\n[cli_service] Query results for '{query_label}':")
         for result in payload.get("results", []):
             print(f"  - {result['image_id']} | {result.get('path', 'unknown')} (score: {result['score']:.3f})")
     except (KeyError, json.JSONDecodeError) as e:
@@ -65,6 +82,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python3 cli_service.py upload <path> <source>")
         print("       python3 cli_service.py search <query>")
+        print("       python3 cli_service.py search-image <path>")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -84,5 +102,16 @@ if __name__ == "__main__":
         )
         t.start()
         submit_query(query)
+        input("Press Enter to exit...\n")
+    elif command == "search-image":
+        query_path = os.path.abspath(sys.argv[2])
+        import threading
+        t = threading.Thread(
+            target=subscribe,
+            args=("query.completed", handle_query_completed),
+            daemon=True
+        )
+        t.start()
+        submit_query_image(query_path)
         input("Press Enter to exit...\n")
 

@@ -7,13 +7,17 @@ from redis_client import r, subscribe
 def store_annotation(image_id: str, annotation: dict):
     # Use Redis hashing as a stand-in, replace with FAISS later
     r.hset("annotations", image_id, json.dumps(annotation))
-    print(f" Stored annotation for {image_id}")
+    print(f"[document_db_service] Stored annotation for {image_id}")
 
 def get_annotation(image_id: str):
     raw = r.hget("annotations", image_id)
     if raw: # Don't return null annotation
         return json.loads(raw)
     return None 
+
+def get_all_annotations() -> list[dict]:
+    all_raw = r.hgetall("annotations")
+    return [json.loads(v) for v in all_raw.values()]
 
 def handle_inference_completed(message):
     # Listen for inference completed
