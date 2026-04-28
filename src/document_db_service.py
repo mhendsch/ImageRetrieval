@@ -2,7 +2,7 @@ import redis
 import json
 from dotenv import load_dotenv
 import os
-from redis_client import r, subscribe
+from redis_client import r, subscribe, publish
 from pymongo import MongoClient
 import uuid
 from datetime import datetime, timezone
@@ -55,13 +55,12 @@ def handle_inference_completed(message):
             "path": payload["path"],
             "camera": payload.get("source"),
             "objects": payload.get("objects", []),
-            "history": ["submitted", "inference_completed"]
+            "history": ["submitted", "inference_completed"],
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
         store_annotation(image_id, annotation)
 
-        from redis_client import publish
-        import uuid
         publish("annotation.stored", {
             "type": "publish",
             "topic": "annotation.stored",
